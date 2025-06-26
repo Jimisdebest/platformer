@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Eenvoudige Platformer met Achtergrond</title>
+  <style>
+    body { margin: 0; }
+    canvas { background: #87ceeb; display: block; margin: 0 auto; }
+  </style>
+</head>
+<body>
+<canvas id="game" width="800" height="400"></canvas>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// Speler
+let player = { x: 50, y: 300, w: 40, h: 40, vx: 0, vy: 0, grounded: false };
+const gravity = 0.6;
+const jumpPower = -12;
+const moveSpeed = 5;
+
+// Platforms
+const platforms = [
+  { x: 0, y: 360, w: 800, h: 40 },
+  { x: 150, y: 270, w: 120, h: 20 },
+  { x: 350, y: 220, w: 120, h: 20 },
+  { x: 600, y: 180, w: 120, h: 20 }
+];
+
+// Input
+let keys = {};
+document.addEventListener('keydown', e => keys[e.code] = true);
+document.addEventListener('keyup', e => keys[e.code] = false);
+
+function drawBackground() {
+  // Lucht
+  ctx.fillStyle = "#87ceeb";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Zon
+  ctx.beginPath();
+  ctx.arc(700, 80, 50, 0, 2 * Math.PI);
+  ctx.fillStyle = "#ffe066";
+  ctx.fill();
+
+  // Wolken
+  function drawCloud(x, y, s) {
+    ctx.beginPath();
+    ctx.arc(x, y, 24 * s, Math.PI * 0.5, Math.PI * 1.5);
+    ctx.arc(x + 30 * s, y - 24 * s, 30 * s, Math.PI * 1, Math.PI * 1.85);
+    ctx.arc(x + 60 * s, y, 24 * s, Math.PI * 1.5, Math.PI * 0.5);
+    ctx.closePath();
+    ctx.fillStyle = "#fff";
+    ctx.globalAlpha = 0.7;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  drawCloud(120, 80, 1);
+  drawCloud(250, 60, 0.8);
+  drawCloud(500, 100, 1.2);
+  drawCloud(620, 60, 0.7);
+
+  // Gras
+  ctx.fillStyle = "#5cb85c";
+  ctx.fillRect(0, 380, canvas.width, 40);
+}
+
+function update() {
+  // Links/rechts bewegen
+  if (keys['ArrowLeft']) player.vx = -moveSpeed;
+  else if (keys['ArrowRight']) player.vx = moveSpeed;
+  else player.vx = 0;
+
+  // Springen
+  if (keys['Space'] && player.grounded) {
+    player.vy = jumpPower;
+    player.grounded = false;
+  }
+
+  // Zwaartekracht
+  player.vy += gravity;
+
+  // Positie updaten
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // Platform collision
+  player.grounded = false;
+  platforms.forEach(p => {
+    if (player.x < p.x + p.w &&
+        player.x + player.w > p.x &&
+        player.y < p.y + p.h &&
+        player.y + player.h > p.y) {
+      // Van boven landen
+      if (player.vy > 0 && player.y + player.h - player.vy <= p.y) {
+        player.y = p.y - player.h;
+        player.vy = 0;
+        player.grounded = true;
+      }
+    }
+  });
+
+  // Binnen het scherm blijven
+  if (player.x < 0) player.x = 0;
+  if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
+  if (player.y + player.h > canvas.height) {
+    player.y = canvas.height - player.h;
+    player.vy = 0;
+    player.grounded = true;
+  }
+}
+
+function draw() {
+  drawBackground();
+
+  // Platforms
+  ctx.fillStyle = "#654321";
+  platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
+
+  // Speler
+  ctx.fillStyle = "#ff0000";
+  ctx.fillRect(player.x, player.y, player.w, player.h);
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>
