@@ -1,399 +1,72 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <title>Platformer Eén Pad + Boost</title>
+  <meta charset="UTF-8">
+  <title>Platformer</title>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      background: #222;
-    }
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
-    }
-    #game {
-      display: block;
-      margin: 0 auto;
-      background: #87ceeb;
-      outline: none;
-    }
-    #ui {
-      position: absolute;
-      top: 20px;
-      left: 0;
-      width: 100vw;
-      text-align: center;
-      font-family: Arial, sans-serif;
-      font-size: 2.2vw;
-      color: #fff;
-      text-shadow: 2px 2px 8px #000;
-      user-select: none;
-      pointer-events: none;
-      z-index: 10;
-    }
-    #startscherm, #winscherm {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(0,0,0,0.8);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 20;
-    }
-    #startscherm h1, #winscherm h1 {
-      color: #ffe066;
-      font-size: 4vw;
-      margin-bottom: 1vw;
-      text-shadow: 2px 2px 10px #000;
-    }
-    #startscherm button, #winscherm button {
-      font-size: 2vw;
-      padding: 1vw 2vw;
-      margin-top: 2vw;
-      background: #ffe066;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: bold;
-      box-shadow: 2px 2px 8px #0008;
-    }
-    #startscherm p {
-      color: #fff;
-      font-size: 1.3vw;
-      max-width: 40vw;
-      text-align: center;
-      margin: 0 0 2vw 0;
-      text-shadow: 1px 1px 6px #000;
-    }
-    #boostbar-bg {
-      position: absolute;
-      top: 65px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 300px;
-      height: 16px;
-      background: #222b;
-      border: 2px solid #fff7;
-      border-radius: 8px;
-      z-index: 15;
-      display: block;
-    }
-    #boostbar {
-      height: 100%;
-      background: linear-gradient(90deg, #ffe066, #ff6f00);
-      border-radius: 8px;
-      width: 100%;
-      transition: width 0.1s;
-    }
-    @media (max-width: 800px) {
-      #ui { font-size: 3.5vw; }
-      #startscherm h1, #winscherm h1 { font-size: 7vw; }
-      #startscherm button, #winscherm button { font-size: 4vw; }
-      #startscherm p { font-size: 2.5vw; }
-      #boostbar-bg { width: 60vw; }
-    }
+    body { text-align: center; }
+    #gameCanvas { border: 1px solid black; margin-top: 20px; }
+    #difficulty-select { margin-top: 60px; }
   </style>
 </head>
 <body>
-<canvas id="game"></canvas>
-<div id="ui"></div>
-<div id="boostbar-bg" style="display:none;">
-  <div id="boostbar"></div>
-</div>
-<div id="startscherm">
-  <h1>Platformer</h1>
-  <p>
-    Spring met <b>spatie</b> en beweeg met <b>← →</b>.<br>
-    Houd <b>SHIFT</b> ingedrukt voor een korte boost: je rent sneller en springt hoger.<br>
-    Boost is tijdelijk, je ziet de boostbalk bovenin.<br>
-    Volg het pad boven het gras naar rechts.<br>
-    Haal alle 10 levels!<br><br>
-    <i>Tip: Springen kan terwijl je beweegt of boosten.</i>
-  </p>
-  <button onclick="startGame()">Start spel</button>
-</div>
-<div id="winscherm" style="display:none">
-  <h1>Je hebt gewonnen! 🎉</h1>
-  <button onclick="restartGame()">Speel opnieuw</button>
-</div>
-<script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const ui = document.getElementById('ui');
-const startscherm = document.getElementById('startscherm');
-const winscherm = document.getElementById('winscherm');
-const boostbarBg = document.getElementById('boostbar-bg');
-const boostbar = document.getElementById('boostbar');
+  <div id="difficulty-select">
+    <label for="difficulty">Kies moeilijkheidsgraad:</label>
+    <select id="difficulty">
+      <option value="easy">Makkelijk</option>
+      <option value="medium">Normaal</option>
+      <option value="hard">Moeilijk</option>
+    </select>
+    <button onclick="startGame()">Start Spel</button>
+  </div>
+  <canvas id="gameCanvas" width="800" height="400" style="display:none;"></canvas>
 
-// Helper voor 1 vast pad boven het gras per level
-function pathPlatforms(level) {
-  const margin = 0.05;
-  const padYStart = 0.8;
-  const padYStep = -0.06;
-  const platformW = 0.18;
-  const platformH = 0.03;
-  let plats = [];
-  let n = 6;
-  let y = padYStart + (level%2===0?0:0.03);
-  for(let i=0;i<n;i++) {
-    let x = margin + i*(1-2*margin-platformW)/(n-1);
-    plats.push({
-      x: x * canvas.width,
-      y: y * canvas.height,
-      w: platformW * canvas.width,
-      h: platformH * canvas.height
-    });
-    if(level%2===0) {
-      y += (i%2===0 ? padYStep : -padYStep/2);
-    } else {
-      y += (i%3===0 ? padYStep : -padYStep/2);
+  <script>
+    let difficulty = 'easy';
+
+    function startGame() {
+      difficulty = document.getElementById('difficulty').value;
+      document.getElementById('difficulty-select').style.display = 'none';
+      document.getElementById('gameCanvas').style.display = 'block';
+      initGameWithDifficulty(difficulty);
     }
-    if(y > 0.87) y = 0.87;
-    if(y < 0.66) y = 0.66;
-  }
-  plats[0].x = margin * canvas.width;
-  plats[n-1].x = (1-margin-platformW) * canvas.width;
-  return plats;
-}
 
-let currentLevel = 0, platforms = [], running = false;
+    function initGameWithDifficulty(difficultyLevel) {
+      // Hier kun je de parameters van het spel aanpassen aan de gekozen moeilijkheid
+      let enemySpeed, platformWidth, numEnemies;
 
-// Speler
-let player = { x: 50, y: 0, w: 40, h: 40, vx: 0, vy: 0, grounded: false };
-
-// Boostmechaniek
-const gravity = 0.6;
-const normalJump = -12;
-const normalSpeed = 5;
-const boostJump = -18;
-const boostSpeed = 9;
-const maxBoost = 1.0; // seconden
-const boostCooldown = 1.0; // seconden
-let boostTime = maxBoost; // hoeveel boost is nog beschikbaar (seconden)
-let boosting = false;
-let boostOnCooldown = false;
-let boostUsedThisPress = false;
-let lastBoostRelease = 0;
-
-// Input
-let keys = {};
-document.addEventListener('keydown', e => keys[e.code] = true);
-document.addEventListener('keyup', e => keys[e.code] = false);
-
-// Canvas altijd fullscreen
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-resizeCanvas();
-window.addEventListener('resize', () => {
-  resizeCanvas();
-  if (running) {
-    platforms = pathPlatforms(currentLevel);
-    resetPlayer();
-  }
-});
-
-function drawBackground() {
-  ctx.fillStyle = "#87ceeb";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.beginPath();
-  ctx.arc(canvas.width - 120, 80, 50, 0, 2 * Math.PI);
-  ctx.fillStyle = "#ffe066";
-  ctx.fill();
-
-  function drawCloud(x, y, s) {
-    ctx.beginPath();
-    ctx.arc(x, y, 24 * s, Math.PI * 0.5, Math.PI * 1.5);
-    ctx.arc(x + 30 * s, y - 24 * s, 30 * s, Math.PI * 1, Math.PI * 1.85);
-    ctx.arc(x + 60 * s, y, 24 * s, Math.PI * 1.5, Math.PI * 0.5);
-    ctx.closePath();
-    ctx.fillStyle = "#fff";
-    ctx.globalAlpha = 0.7;
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-  drawCloud(canvas.width * 0.15, 80, 1.2);
-  drawCloud(canvas.width * 0.35, 60, 0.9);
-  drawCloud(canvas.width * 0.75, 100, 1.5);
-  drawCloud(canvas.width * 0.5, 50, 0.7);
-
-  ctx.fillStyle = "#5cb85c";
-  ctx.fillRect(0, canvas.height * 0.93, canvas.width, canvas.height * 0.07);
-}
-
-function resetPlayer() {
-  player.x = platforms[0].x + 10;
-  player.y = platforms[0].y - player.h;
-  player.vx = 0;
-  player.vy = 0;
-  player.grounded = false;
-  boostTime = maxBoost;
-  boosting = false;
-  boostOnCooldown = false;
-}
-
-function nextLevel() {
-  currentLevel++;
-  if (currentLevel >= 10) {
-    running = false;
-    winscherm.style.display = "";
-    ui.textContent = "";
-    boostbarBg.style.display = "none";
-    return;
-  }
-  platforms = pathPlatforms(currentLevel);
-  resetPlayer();
-  showLevelUI();
-}
-
-function showLevelUI() {
-  ui.textContent = `Level ${currentLevel + 1} / 10`;
-}
-
-function updateBoost(dt) {
-  const shift = keys['ShiftLeft'] || keys['ShiftRight'];
-  if (shift && !boostOnCooldown && boostTime > 0) {
-    boosting = true;
-    boostTime -= dt;
-    if(boostTime < 0) boostTime = 0;
-    boostUsedThisPress = true;
-  } else {
-    if(boostUsedThisPress && !shift) {
-      boostOnCooldown = true;
-      lastBoostRelease = performance.now();
-      boostUsedThisPress = false;
-    }
-    boosting = false;
-  }
-  // Cooldown
-  if(boostOnCooldown) {
-    if(performance.now() - lastBoostRelease > boostCooldown * 1000) {
-      boostOnCooldown = false;
-      boostTime = maxBoost;
-    }
-  }
-  // Update boostbalk
-  if(running) {
-    boostbarBg.style.display = "";
-    boostbar.style.width = Math.max(0, boostTime / maxBoost * 100) + "%";
-    boostbar.style.background = boostOnCooldown
-      ? "linear-gradient(90deg, #aaa, #888)"
-      : "linear-gradient(90deg, #ffe066, #ff6f00)";
-    boostbarBg.style.opacity = boostOnCooldown ? "0.5" : "1";
-  }
-}
-
-let jumpQueued = false;
-
-function update() {
-  const dt = 1/60;
-  updateBoost(dt);
-
-  // Links/rechts bewegen
-  let speed = boosting ? boostSpeed : normalSpeed;
-  if (keys['ArrowLeft']) player.vx = -speed;
-  else if (keys['ArrowRight']) player.vx = speed;
-  else player.vx = 0;
-
-  // Springen
-  let jumpPower = boosting ? boostJump : normalJump;
-  if (keys['Space']) {
-    if (player.grounded) {
-      player.vy = jumpPower;
-      player.grounded = false;
-      jumpQueued = false;
-    } else {
-      jumpQueued = true;
-    }
-  } else if (jumpQueued && player.grounded) {
-    player.vy = jumpPower;
-    player.grounded = false;
-    jumpQueued = false;
-  }
-
-  // Zwaartekracht
-  player.vy += gravity;
-
-  // Positie updaten
-  player.x += player.vx;
-  player.y += player.vy;
-
-  // Platform collision
-  player.grounded = false;
-  platforms.forEach(p => {
-    if (player.x < p.x + p.w &&
-        player.x + player.w > p.x &&
-        player.y < p.y + p.h &&
-        player.y + player.h > p.y) {
-      if (player.vy > 0 && player.y + player.h - player.vy <= p.y) {
-        player.y = p.y - player.h;
-        player.vy = 0;
-        player.grounded = true;
+      if (difficultyLevel === 'easy') {
+        enemySpeed = 2;
+        platformWidth = 120;
+        numEnemies = 2;
+      } else if (difficultyLevel === 'medium') {
+        enemySpeed = 4;
+        platformWidth = 90;
+        numEnemies = 4;
+      } else if (difficultyLevel === 'hard') {
+        enemySpeed = 6;
+        platformWidth = 60;
+        numEnemies = 6;
       }
-    }
-  });
 
-  // Binnen het scherm blijven
-  if (player.x < 0) player.x = 0;
-  if (player.y + player.h > canvas.height) {
-    player.y = canvas.height - player.h;
-    player.vy = 0;
-    player.grounded = true;
-  }
+      // Voorbeeld van het tekenen van het spelcanvas
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Ga naar volgend level als je de rechterrand van het laatste platform raakt
-  const lastPlat = platforms[platforms.length-1];
-  if (player.x + player.w >= lastPlat.x + lastPlat.w - 10) {
-    nextLevel();
-  }
-}
+      // Teken platforms
+      for (let i = 0; i < 5; i++) {
+        ctx.fillStyle = '#654321';
+        ctx.fillRect(i * (platformWidth + 30) + 50, 300, platformWidth, 20);
+      }
 
-function draw() {
-  drawBackground();
+      // Teken vijanden
+      for (let i = 0; i < numEnemies; i++) {
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(100 + i * 120, 270, 20, 30);
+      }
 
-  // Platforms
-  ctx.fillStyle = "#654321";
-  platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, p.h));
-
-  // Speler
-  ctx.fillStyle = boosting ? "#ff9900" : "#ff0000";
-  ctx.fillRect(player.x, player.y, player.w, player.h);
-}
-
-function gameLoop() {
-  if (!running) return;
-  update();
-  draw();
-  requestAnimationFrame(gameLoop);
-}
-
-function startGame() {
-  startscherm.style.display = "none";
-  winscherm.style.display = "none";
-  running = true;
-  currentLevel = 0;
-  platforms = pathPlatforms(currentLevel);
-  resetPlayer();
-  showLevelUI();
-  boostbarBg.style.display = "";
-  gameLoop();
-}
-
-function restartGame() {
-  startGame();
-}
-</script>
-</body>
-</html>
+      // Teken speler
+      ctx.fillStyle = '#0000ff';
+      ctx*
+
