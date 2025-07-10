@@ -1,4 +1,28 @@
-<audio id="bgMusic" autoplay loop>
-  <source src="assets/sounds/achtergrondmuziek.mp3" type="audio/mpeg">
-  Je browser ondersteunt geen audio-element.
-</audio>
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <title>Jim's Platformer</title>
+  <style>
+    canvas { border: 2px solid #333; display: block; margin: auto; background-color: #eee; }
+    body { text-align: center; font-family: sans-serif; background-color: #1e1e1e; color: #fff; }
+    button { margin: 10px; padding: 10px 20px; font-size: 18px; }
+  </style>
+</head>
+<body>
+
+  <h1>Welkom bij Jim's Platformer</h1>
+  <button onclick="startGame()">Start Game</button>
+  <button onclick="triggerSuspenseMoment()">Laat Spanning Beginnen</button>
+  <button onclick="toggleMusic()">Muziek aan/uit</button>
+
+  <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+  <!-- Achtergrondmuziek -->
+  <audio id="bgMusic" autoplay loop>
+    <source src="assets/sounds/achtergrondmuziek.mp3" type="audio/mpeg">
+  </audio>
+
+  <script src="script.js"></script>
+</body>
+</html>
