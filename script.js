@@ -1,14 +1,11 @@
-// script.js
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-
-function drawMenu() {
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#fff";
-  ctx.font = "40px sans-serif";
-  ctx.fillText("Start Game", 300, 250);
-  // Meer menu-items...
+// Simpele spike-detectie
+function checkSpikeCollision(player, spikes) {
+  for (let spike of spikes) {
+    if (player.x < spike.x + spike.width &&
+        player.x + player.width > spike.x &&
+        player.y < spike.y + spike.height &&
+        player.y + player.height > spike.y) {
+      player.isDead = true;
+    }
+  }
 }
-
-drawMenu();
